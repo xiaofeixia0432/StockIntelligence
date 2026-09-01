@@ -1,0 +1,16 @@
+version: '3.9'
+
+services:
+  stock-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stock-analysis-app
+    ports:
+      - "5000:5000"
+    environment:
+      STOCK_SECRET_KEY: ${STOCK_SECRET_KEY:-stock-analysis-secret-key}
+      PORT: ${PORT:-5000}
+    restart: unless-stopped
+    volumes:
+      - .:/app

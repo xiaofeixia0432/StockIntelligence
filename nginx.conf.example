@@ -1,0 +1,57 @@
+# 生产环境反向代理示例：将 Nginx 作为前端入口，转发到 Flask 服务。
+# 适用场景：部署到 VPS / 云主机 / Docker 宿主机。
+#
+# 使用方式：
+# 1. 将此文件复制为 /etc/nginx/conf.d/stock-app.conf
+# 2. 修改 server_name、静态资源目录和证书路径
+# 3. 执行：nginx -s reload
+#
+# HTTPS 方案建议：
+# - 使用 Let's Encrypt 证书
+# - 配置 443 ssl_server
+# - 在 80 端口进行重定向到 443
+
+upstream stock_app_upstream {
+    server 127.0.0.1:5000;
+    keepalive 16;
+}
+
+server {
+    listen 80;
+    server_name stock.example.com;
+    client_max_body_size 20m;
+
+    location / {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_redirect off;
+        proxy_pass http://stock_app_upstream;
+    }
+
+    location /static/ {
+        alias /path/to/project/static/;
+        expires 1d;
+        add_header Cache-Control "public";
+    }
+}
+
+# 证书配置范例（可选）：
+# server {
+#     listen 443 ssl http2;
+#     server_name stock.example.com;
+#     ssl_certificate /etc/letsencrypt/live/stock.example.com/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/stock.example.com/privkey.pem;
+#     ssl_session_cache shared:SSL:10m;
+#     ssl_session_timeout 10m;
+#
+#     location / {
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto https;
+#         proxy_pass http://stock_app_upstream;
+#     }
+# }

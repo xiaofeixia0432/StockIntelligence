@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>股票分析中心</title>
+    <link rel="stylesheet" href="/static/css/styles.css" />
+  </head>
+  <body data-theme="light">
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-wrap">
+          <div class="brand-mark" aria-label="StockPulse logo">
+            <img src="/static/images/stock-logo.svg" alt="StockPulse logo" class="brand-logo" />
+          </div>
+          <div class="brand-copy">
+            <p class="eyebrow">Stock Intelligence</p>
+            <h1>股票分析中心</h1>
+          </div>
+          <div class="brand-side-tools">
+            <div class="mini-clock-widget" aria-live="polite">
+              <svg class="clock-svg" viewBox="0 0 100 100" role="img" aria-label="Current time clock">
+                <circle class="clock-face" cx="50" cy="50" r="44"></circle>
+                <g class="clock-markers">
+                  <line x1="50" y1="10" x2="50" y2="16"></line>
+                  <line x1="78" y1="18" x2="74" y2="24"></line>
+                  <line x1="90" y1="50" x2="84" y2="50"></line>
+                  <line x1="78" y1="82" x2="74" y2="76"></line>
+                  <line x1="50" y1="90" x2="50" y2="84"></line>
+                  <line x1="22" y1="82" x2="26" y2="76"></line>
+                  <line x1="10" y1="50" x2="16" y2="50"></line>
+                  <line x1="22" y1="18" x2="26" y2="24"></line>
+                </g>
+                <line id="hourHand" class="clock-hand hour-hand" x1="50" y1="50" x2="50" y2="31"></line>
+                <line id="minuteHand" class="clock-hand minute-hand" x1="50" y1="50" x2="50" y2="20"></line>
+                <line id="secondHand" class="clock-hand second-hand" x1="50" y1="50" x2="50" y2="16"></line>
+                <circle class="clock-center" cx="50" cy="50" r="4"></circle>
+              </svg>
+              <div class="mini-time-wrap">
+                <div id="currentTime" class="mini-time">--:--:--</div>
+                <div id="currentDate" class="mini-date">--</div>
+              </div>
+            </div>
+            <div class="mini-calendar-card" aria-live="polite">
+              <div id="calendarMonth" class="calendar-month">SEP</div>
+              <div id="calendarDay" class="calendar-day">01</div>
+            </div>
+          </div>
+        </div>
+        <div class="top-actions">
+          <div class="header-status" aria-live="polite">
+            <span class="status-dot"></span>
+            <span id="lastUpdatedText">已同步</span>
+          </div>
+          <div class="header-auth-group">
+            <a href="/login" class="tiny-btn ghost-btn" role="button">登录</a>
+            <a href="/register" class="tiny-btn ghost-btn" role="button">注册</a>
+            <button id="logoutBtn" class="tiny-btn secondary-btn hidden" type="button">退出</button>
+          </div>
+          <button id="themeToggleBtn" class="ghost-btn" type="button">深色模式</button>
+          <button id="refreshBtn" class="primary-btn">刷新数据</button>
+          <button id="exportReportBtn" class="ghost-btn">导出报告</button>
+        </div>
+      </header>
+
+      <div id="marketTicker" class="market-ticker" aria-label="主要指数速览"></div>
+
+      <main class="layout">
+        <aside class="sidebar card">
+          <div class="auth-panel">
+            <h2>用户中心</h2>
+            <div id="authStatus" class="auth-status">未登录</div>
+            <div class="auth-actions">
+              <a href="/login" class="primary-btn auth-link" role="button">登录</a>
+              <a href="/register" class="ghost-btn auth-link" role="button">注册</a>
+            </div>
+          </div>
+
+          <div class="profile-panel">
+            <h2>个人设置</h2>
+            <form id="profileForm" class="auth-form">
+              <div class="form-group">
+                <label for="profileDefaultSymbol">默认股票</label>
+                <input id="profileDefaultSymbol" type="text" placeholder="如 bj920000" />
+              </div>
+              <div class="form-group">
+                <label for="profileRefreshInterval">自动刷新（秒）</label>
+                <input id="profileRefreshInterval" type="number" min="15" max="300" step="5" value="60" />
+              </div>
+              <div class="form-group">
+                <label for="profileAlertThreshold">提醒阈值（%）</label>
+                <input id="profileAlertThreshold" type="number" min="0" max="50" step="0.5" value="5" />
+              </div>
+              <button type="submit" class="primary-btn">保存设置</button>
+            </form>
+          </div>
+
+          <div class="alert-panel">
+            <h2>个股预警</h2>
+            <form id="alertForm" class="auth-form">
+              <div class="form-group">
+                <label for="alertSymbol">股票代码</label>
+                <input id="alertSymbol" type="text" placeholder="如 BJ920000" />
+              </div>
+              <div class="form-group">
+                <label for="alertPeriod">预警周期</label>
+                <select id="alertPeriod">
+                  <option value="3m">3个月最低价</option>
+                  <option value="6m">6个月最低价</option>
+                  <option value="1y">1年最低价</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="alertEnabled">状态</label>
+                <select id="alertEnabled">
+                  <option value="1">启用</option>
+                  <option value="0">关闭</option>
+                </select>
+              </div>
+              <button type="submit" class="primary-btn">保存预警</button>
+            </form>
+            <div id="alertList" class="watchlist-list"></div>
+          </div>
+
+          <div class="profile-panel">
+            <h2>邮件配置</h2>
+            <form id="emailConfigForm" class="auth-form">
+              <div class="form-group">
+                <label for="mailSenderName">发件人名称</label>
+                <input id="mailSenderName" type="text" placeholder="例如 StockPulse" />
+              </div>
+              <div class="form-group">
+                <label for="mailSenderEmail">发件邮箱</label>
+                <input id="mailSenderEmail" type="email" placeholder="sender@example.com" />
+              </div>
+              <div class="form-group">
+                <label for="mailSmtpHost">SMTP 服务器</label>
+                <input id="mailSmtpHost" type="text" placeholder="smtp.example.com" />
+              </div>
+              <div class="form-group">
+                <label for="mailSmtpPort">SMTP 端口</label>
+                <input id="mailSmtpPort" type="number" min="1" max="465" value="465" />
+              </div>
+              <div class="form-group">
+                <label for="mailSmtpUser">SMTP 用户名</label>
+                <input id="mailSmtpUser" type="text" placeholder="邮箱账号" />
+              </div>
+              <div class="form-group">
+                <label for="mailSmtpPassword">SMTP 密码</label>
+                <input id="mailSmtpPassword" type="password" placeholder="授权码/密码" />
+              </div>
+              <div class="form-group">
+                <label for="mailRecipientName">收件人名称</label>
+                <input id="mailRecipientName" type="text" placeholder="接收人别名" />
+              </div>
+              <div class="form-group">
+                <label for="mailRecipientEmail">收件邮箱</label>
+                <input id="mailRecipientEmail" type="email" placeholder="receiver@example.com" />
+              </div>
+              <div class="form-group">
+                <label for="mailEnabled">邮件提醒</label>
+                <select id="mailEnabled">
+                  <option value="1">启用</option>
+                  <option value="0">关闭</option>
+                </select>
+              </div>
+              <button type="submit" class="primary-btn">保存邮件配置</button>
+            </form>
+          </div>
+
+          <div class="control-panel">
+            <h2>控制面板</h2>
+            <div class="form-group">
+              <label for="tableSelect">股票筛选</label>
+              <select id="tableSelect">
+                <option value="all">全部股票</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="daysInput">统计天数</label>
+              <input id="daysInput" type="number" min="1" value="30" />
+            </div>
+
+            <div class="form-group">
+              <label for="dateInput">指定日期</label>
+              <input id="dateInput" type="date" />
+            </div>
+
+            <div class="button-row">
+              <button class="primary-btn" data-action="summary">数据库概览</button>
+              <button class="ghost-btn" data-action="dateStats">日期统计</button>
+            </div>
+
+            <div class="button-row compact">
+              <button class="ghost-btn" data-action="trends">趋势分析</button>
+              <button class="ghost-btn" data-action="dropRatio">跌幅分析</button>
+            </div>
+
+            <div class="button-row compact">
+              <button class="ghost-btn" data-action="diffGroup">高低差分布</button>
+              <button class="ghost-btn" data-action="openLow">开盘跌幅</button>
+            </div>
+          </div>
+        </aside>
+
+        <section class="content">
+          <div id="summaryCards" class="stats-grid module-overview"></div>
+
+          <div class="card panel module-panel module-results" data-module="results">
+            <div class="panel-header">
+              <h2>最新结果</h2>
+              <span id="statusBadge" class="status-badge">待更新</span>
+            </div>
+            <div id="resultBox" class="result-box empty">点击上方按钮加载数据...</div>
+          </div>
+
+          <div class="two-col">
+            <section class="card panel module-panel module-stocks" data-module="stocks">
+              <div class="panel-header">
+                <h2>个股查询</h2>
+                <span class="mini-tag">实时库查询</span>
+              </div>
+              <div class="search-row">
+                <input id="stockSearchInput" type="text" placeholder="输入股票代码，如 bj920000" />
+                <button id="stockSearchBtn" class="primary-btn">查询</button>
+              </div>
+              <div id="stockSearchResults" class="stock-results"></div>
+              <div id="stockDetail" class="stock-detail"></div>
+              <div id="stockSignals" class="stock-signals"></div>
+              <div id="stockChartWrap" class="chart-wrap hidden">
+                <canvas id="stockChart" height="220"></canvas>
+              </div>
+              <div id="backtestResult" class="backtest-box"></div>
+            </section>
+
+            <section class="card panel module-panel module-news" data-module="news">
+              <div class="panel-header">
+                <h2>个股新闻</h2>
+                <span class="mini-tag">热点速览</span>
+              </div>
+              <div id="newsList" class="news-list"></div>
+            </section>
+          </div>
+
+          <section class="card panel module-panel module-market" data-module="market">
+            <div class="panel-header">
+              <h2>市场概览</h2>
+              <span class="mini-tag">涨跌幅排行</span>
+            </div>
+            <div id="marketOverview" class="market-overview"></div>
+            <div id="marketHeat" class="market-heat"></div>
+            <div id="marketPulse" class="pulse-grid"></div>
+          </section>
+
+          <section class="card panel module-panel module-screener" data-module="screener">
+            <div class="panel-header">
+              <h2>智能股票筛选</h2>
+              <span class="mini-tag">快速候选池</span>
+            </div>
+            <div class="screen-controls">
+              <input id="screenMinChange" type="number" step="0.1" value="0" placeholder="最小涨跌幅%" />
+              <input id="screenMinScore" type="number" min="0" max="100" step="1" value="60" placeholder="最低技术分" />
+              <select id="screenSignalType">
+                <option value="all">全部信号</option>
+                <option value="偏强">偏强</option>
+                <option value="偏弱">偏弱</option>
+                <option value="震荡">震荡</option>
+              </select>
+              <button id="stockScreenBtn" class="primary-btn">筛选</button>
+            </div>
+            <div id="stockScreenResults" class="screen-list"></div>
+          </section>
+
+          <section class="card panel module-panel module-watchlist" data-module="watchlist">
+            <div class="panel-header">
+              <h2>自选股</h2>
+              <span class="mini-tag">登录后可用</span>
+            </div>
+            <div class="watchlist-actions">
+              <input id="watchlistSymbol" type="text" placeholder="添加股票代码，如 BJ920000" />
+              <input id="watchlistNote" type="text" placeholder="备注" />
+              <button id="addWatchlistBtn" class="primary-btn">加入自选</button>
+            </div>
+            <div id="watchlistList" class="watchlist-list"></div>
+          </section>
+
+          <section class="card panel module-panel module-portfolio" data-module="portfolio">
+            <div class="panel-header">
+              <h2>持仓管理</h2>
+              <span class="mini-tag">真实收益分析</span>
+            </div>
+            <form id="portfolioForm" class="portfolio-form">
+              <div class="portfolio-grid">
+                <input id="portfolioSymbol" type="text" placeholder="股票代码，如 BJ920000" required />
+                <input id="portfolioShares" type="number" min="0.01" step="0.01" placeholder="持仓数量" required />
+                <input id="portfolioAvgCost" type="number" min="0.01" step="0.01" placeholder="平均成本" required />
+              </div>
+              <input id="portfolioNote" type="text" placeholder="备注（可选）" />
+              <div class="button-row inline-actions">
+                <button type="submit" class="primary-btn">保存持仓</button>
+                <button type="button" id="clearPortfolioBtn" class="ghost-btn">清空</button>
+              </div>
+            </form>
+            <div id="portfolioRisk" class="portfolio-risk"></div>
+            <div id="portfolioList" class="portfolio-list"></div>
+          </section>
+
+          <section class="card panel module-panel module-plan" data-module="plan">
+            <div class="panel-header">
+              <h2>定投计划</h2>
+              <span class="mini-tag">长期积累</span>
+            </div>
+            <form id="planForm" class="plan-form">
+              <div class="plan-grid">
+                <input id="planSymbol" type="text" placeholder="股票代码，如 BJ920000" required />
+                <input id="planAmount" type="number" min="0.01" step="0.01" placeholder="月投入金额" required />
+                <input id="planMonths" type="number" min="1" step="1" value="12" placeholder="计划月数" required />
+              </div>
+              <div class="plan-grid secondary-grid">
+                <input id="planTargetReturn" type="number" min="0" step="0.1" value="8" placeholder="目标年化收益%" />
+                <input id="planNote" type="text" placeholder="备注（可选）" />
+              </div>
+              <div class="button-row inline-actions">
+                <button type="submit" class="primary-btn">保存计划</button>
+                <button type="button" id="clearPlanBtn" class="ghost-btn">清空</button>
+              </div>
+            </form>
+            <div id="planList" class="plan-list"></div>
+          </section>
+
+          <section class="card panel module-panel module-compare" data-module="compare">
+            <div class="panel-header">
+              <h2>策略对比</h2>
+              <span class="mini-tag">横向评估</span>
+            </div>
+            <div id="strategyCompare" class="compare-list"></div>
+          </section>
+
+          <section class="card panel module-panel module-backtest" data-module="backtest">
+            <div class="panel-header">
+              <h2>回测趋势</h2>
+              <span class="mini-tag">均线策略表现</span>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="backtestTrendChart" height="220"></canvas>
+            </div>
+          </section>
+
+          <section class="card panel module-panel module-portfolio-chart" data-module="portfolio-chart">
+            <div class="panel-header">
+              <h2>收益总览</h2>
+              <span class="mini-tag">组合收益图</span>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="portfolioSummaryChart" height="220"></canvas>
+            </div>
+          </section>
+
+          <section class="card panel module-panel module-insight" data-module="insight">
+            <div class="panel-header">
+              <h2>AI交易建议</h2>
+              <span class="mini-tag">智能摘要</span>
+            </div>
+            <div id="aiSummary" class="ai-summary"></div>
+          </section>
+
+          <section class="card panel module-panel module-alerts" data-module="alerts">
+            <div class="panel-header">
+              <h2>提醒中心</h2>
+              <span class="mini-tag">重要通知</span>
+            </div>
+            <div id="notificationList" class="notification-list"></div>
+          </section>
+
+          <section class="card panel module-panel module-strategy" data-module="strategy">
+            <div class="panel-header">
+              <h2>股票策略配置</h2>
+              <span class="mini-tag">按股票单独设置</span>
+            </div>
+
+            <form id="strategyForm" class="strategy-form">
+              <div class="strategy-grid">
+                <input id="strategySymbol" type="text" placeholder="股票代码，例如 bj920000" required />
+                <input id="strategyName" type="text" placeholder="策略名称" required />
+                <select id="strategyStatus">
+                  <option value="active">启用</option>
+                  <option value="paused">暂停</option>
+                  <option value="closed">关闭</option>
+                </select>
+              </div>
+              <textarea id="strategyDescription" rows="2" placeholder="策略说明"></textarea>
+              <textarea id="strategyRule" rows="3" placeholder="策略规则（例如：当5日均线在10日均线上方，且成交量放大）"></textarea>
+              <div class="strategy-grid">
+                <textarea id="entryCondition" rows="2" placeholder="买入条件"></textarea>
+                <textarea id="exitCondition" rows="2" placeholder="卖出条件"></textarea>
+              </div>
+              <div class="button-row inline-actions">
+                <button type="submit" class="primary-btn">保存策略</button>
+                <button type="button" id="clearStrategyBtn" class="ghost-btn">清空</button>
+              </div>
+            </form>
+
+            <div id="strategyList" class="strategy-list"></div>
+          </section>
+
+          <div class="card panel">
+            <div class="panel-header">
+              <h2>数据列表</h2>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead id="tableHead"></thead>
+                <tbody id="tableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/app.js"></script>
+  </body>
+</html>
